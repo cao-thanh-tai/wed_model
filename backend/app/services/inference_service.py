@@ -10,11 +10,17 @@ class InferenceService:
 
     def _get_predictor(self, model_id: str) -> Any:
         if model_id not in self._predictors:
-            if model_id != "pascal-voc-multilabel-vit":
-                raise KeyError(model_id)
-            from models.pascal_voc_multilabel_vit.inference import PascalVocInference
+            if model_id == "pascal-voc-multilabel-vit":
+                from models.pascal_voc_multilabel_vit.inference import PascalVocInference
 
-            self._predictors[model_id] = PascalVocInference()
+                predictor = PascalVocInference()
+            elif model_id == "cub-200-2011":
+                from models.cub_200_2011.inference import Cub200Inference
+
+                predictor = Cub200Inference()
+            else:
+                raise KeyError(model_id)
+            self._predictors[model_id] = predictor
         return self._predictors[model_id]
 
     def predict_image(self, model_id: str, content: bytes) -> list[dict[str, Any]]:

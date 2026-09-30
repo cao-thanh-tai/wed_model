@@ -41,9 +41,9 @@ function ModelPage({ apiState, models }: ModelPageProps) {
       <div className="detail-grid">
         <article className="detail-panel detail-panel-wide">
           <p className="eyebrow">About this model</p>
-          <h3>Pascal VOC object recognition</h3>
-          <p>This model can identify multiple objects in one image. It was trained as a multi-label computer vision classifier.</p>
-          <div className="spec-list"><span><b>Input</b>{model.input_type}</span><span><b>Output</b>{model.output_type}</span><span><b>Classes</b>20 labels</span></div>
+          <h3>{model.name}</h3>
+          <p>{model.description}</p>
+          <div className="spec-list"><span><b>Input</b>{model.input_type}</span><span><b>Output</b>{model.output_type}</span><span><b>Metrics</b>{Object.keys(model.metrics).length || "Not available"}</span></div>
         </article>
         <article className="detail-panel metrics-panel">
           <p className="eyebrow">Evaluation</p>

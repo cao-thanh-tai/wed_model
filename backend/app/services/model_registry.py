@@ -32,3 +32,13 @@ model_registry.register(
         },
     )
 )
+model_registry.register(
+    ModelMetadata(
+        id="cub-200-2011",
+        name="CUB-200-2011 Bird Classification",
+        description="ResNet50 classifier trained to recognize 200 bird species from the CUB-200-2011 dataset.",
+        category="Computer Vision",
+        input_type="image",
+        output_type="top-k classification",
+    )
+)

@@ -19,12 +19,18 @@ The model is a Pascal VOC multi-label ViT classifier with 20 labels. It uses
 the weights in `models/pascal_voc_multilabel_vit/weights/voc-multilabel-vit/` and has been tested
 through the inference API.
 
+The CV backend also serves the CUB-200-2011 ResNet50 classifier. Its runtime
+adapter is in `models/cub_200_2011/inference.py`, and its 200 class names are
+loaded from `models/cub_200_2011/classes.txt`. The local checkpoint is about
+192 MB and is intentionally excluded from normal Git commits.
+
 ## Runtime Layout
 
 - `frontend/`: React + TypeScript + Vite. Default API URL is port `8001`.
 - `backend/`: FastAPI routes, schemas, registry, and inference orchestration.
 - `backend/ml_app/`: separate ML FastAPI backend for the `ml` environment.
 - `models/pascal_voc_multilabel_vit/`: model runtime code and weights.
+- `models/cub_200_2011/`: CUB-200-2011 runtime adapter, class names, and local checkpoint.
 - `models/titanic_xgboost/`: Titanic XGBoost and Random Forest runtime code and weights.
 - `backend/requirements.txt`: shared backend dependencies.
 - `backend/ml_app/requirements.txt`: ML backend dependencies.
@@ -40,6 +46,7 @@ through the inference API.
 GET  /api/v1/health
 GET  /api/v1/models
 POST /api/v1/inference/pascal-voc-multilabel-vit
+POST /api/v1/inference/cub-200-2011
 ```
 
 The inference endpoint accepts an image as multipart form field `file` and
@@ -82,8 +89,12 @@ Frontend URL: `http://localhost:5173`
 - `/api/v1/health` returns HTTP 200.
 - `/api/v1/models` returns `pascal-voc-multilabel-vit` metadata.
 - Multipart image inference returns HTTP 200 and predictions.
+- CUB-200-2011 checkpoint loads in the `cv` environment and returns top-5 species predictions.
+- CUB class names are mapped from `classes.txt` instead of generic class IDs.
 - ML health, model listing, and Titanic inference return HTTP 200 in Conda `ml`.
 - Frontend production build passes with `npm run build`.
+- Frontend image tester supports drag-and-drop, image validation, and explicit inference loading/error states.
+- Frontend model navigation uses client-side routing without full page reloads.
 - ML API returns both `titanic-xgboost` and `titanic-random-forest`.
 - Titanic form inference works from the ML API and frontend.
 

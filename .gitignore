@@ -16,3 +16,4 @@ frontend/dist/
 #weights and checkpoints
 weights/
 checkpoints/
+models/*/models/

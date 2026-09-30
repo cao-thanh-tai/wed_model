@@ -1,4 +1,4 @@
-import { ChangeEvent, useEffect, useState } from "react";
+import { ChangeEvent, DragEvent, useEffect, useState } from "react";
 import { inferImage, Prediction } from "../services/api";
 import { saveRun } from "../services/runHistory";
 
@@ -13,6 +13,7 @@ function ModelTester({ modelId, modelName }: ModelTesterProps) {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
 
   useEffect(() => {
     return () => {
@@ -20,9 +21,16 @@ function ModelTester({ modelId, modelName }: ModelTesterProps) {
     };
   }, [previewUrl]);
 
-  function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
-    const selectedFile = event.target.files?.[0];
+  function selectFile(selectedFile: File | undefined) {
     if (!selectedFile) return;
+    if (!selectedFile.type.startsWith("image/")) {
+      setError("Please choose an image file.");
+      return;
+    }
+    if (selectedFile.size > 10 * 1024 * 1024) {
+      setError("Image must be smaller than 10 MB.");
+      return;
+    }
 
     if (previewUrl) URL.revokeObjectURL(previewUrl);
     setFile(selectedFile);
@@ -31,11 +39,20 @@ function ModelTester({ modelId, modelName }: ModelTesterProps) {
     setError(null);
   }
 
+  function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
+    selectFile(event.target.files?.[0]);
+  }
+
+  function handleDrop(event: DragEvent<HTMLLabelElement>) {
+    event.preventDefault();
+    setIsDragging(false);
+    selectFile(event.dataTransfer.files[0]);
+  }
+
   async function handleInference() {
     if (!file) return;
     setIsLoading(true);
     setError(null);
-    setPredictions([]);
 
     try {
       const result = await inferImage(modelId, file);
@@ -51,13 +68,21 @@ function ModelTester({ modelId, modelName }: ModelTesterProps) {
   return (
     <div className="tester-grid">
       <div className="upload-panel">
-        <label className={`upload-zone ${previewUrl ? "has-preview" : ""}`}>
+        <label
+          className={`upload-zone ${previewUrl ? "has-preview" : ""} ${isDragging ? "is-dragging" : ""}`}
+          onDragOver={(event) => {
+            event.preventDefault();
+            setIsDragging(true);
+          }}
+          onDragLeave={() => setIsDragging(false)}
+          onDrop={handleDrop}
+        >
           {previewUrl ? (
             <img src={previewUrl} alt="Selected input" />
           ) : (
             <>
               <span className="upload-symbol">+</span>
-              <strong>Drop an image here</strong>
+              <strong>{isDragging ? "Release to upload" : "Drop an image here"}</strong>
               <span>or choose a file from your device</span>
             </>
           )}
@@ -69,7 +94,7 @@ function ModelTester({ modelId, modelName }: ModelTesterProps) {
             {isLoading ? "Running..." : "Run inference"}
           </button>
         </div>
-        {error && <p className="error-message">{error}</p>}
+        {error && <p className="error-message" role="alert">{error}</p>}
       </div>
 
       <div className="results-panel">
@@ -77,7 +102,12 @@ function ModelTester({ modelId, modelName }: ModelTesterProps) {
           <span className="eyebrow">Output</span>
           {predictions.length > 0 && <span>{predictions.length} labels</span>}
         </div>
-        {predictions.length > 0 ? (
+        {isLoading ? (
+          <div className="results-empty">
+            <span>Analyzing image...</span>
+            <p>The model is preparing its top predictions.</p>
+          </div>
+        ) : predictions.length > 0 ? (
           <ul className="prediction-list">
           {predictions.map((prediction) => (
             <li key={prediction.label}>
@@ -88,8 +118,8 @@ function ModelTester({ modelId, modelName }: ModelTesterProps) {
           </ul>
         ) : (
           <div className="results-empty">
-            <span>Awaiting input</span>
-            <p>Prediction results will appear here.</p>
+            <span>{error ? "No result" : "Awaiting input"}</span>
+            <p>{error ? "Fix the issue and run inference again." : "Prediction results will appear here."}</p>
           </div>
         )}
       </div>

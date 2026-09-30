@@ -1,3 +1,4 @@
+import { NavLink } from "react-router-dom";
 import { NavigationItem } from "../types/navigation";
 
 const navigationItems: NavigationItem[] = [
@@ -16,15 +17,19 @@ function Sidebar() {
 
       <nav aria-label="Primary navigation" className="primary-nav">
         {navigationItems.map((item) => (
-          <a
-            className={`nav-item ${item.status === "active" ? "is-active" : ""}`}
-            href={item.status === "active" ? item.path : undefined}
+          <NavLink
+            className={({ isActive }) => `nav-item ${isActive ? "is-active" : ""}`}
+            to={item.path}
             key={item.path}
+            end={item.path === "/"}
             aria-disabled={item.status === "planned"}
+            onClick={(event) => {
+              if (item.status === "planned") event.preventDefault();
+            }}
           >
             <span>{item.label}</span>
             {item.status === "planned" && <small>soon</small>}
-          </a>
+          </NavLink>
         ))}
       </nav>
 
