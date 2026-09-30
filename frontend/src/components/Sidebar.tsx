@@ -10,10 +10,10 @@ const navigationItems: NavigationItem[] = [
 function Sidebar() {
   return (
     <aside className="sidebar">
-      <div className="brand-lockup">
+      <NavLink className="brand-lockup" to="/" aria-label="Go to AI Hub home">
         <span className="brand-mark">A</span>
         <span>AI Hub</span>
-      </div>
+      </NavLink>
 
       <nav aria-label="Primary navigation" className="primary-nav">
         {navigationItems.map((item) => (

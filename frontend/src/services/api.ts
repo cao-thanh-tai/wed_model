@@ -24,6 +24,14 @@ export type TabularPrediction = {
 
 export type ApiState = "checking" | "online" | "offline";
 
+export type LoadedModel = {
+  model_id: string;
+  loaded_at: string;
+  load_time_ms: number;
+  device: string;
+  source: "cv" | "ml";
+};
+
 export async function getHealth(): Promise<{ status: string }> {
   const response = await fetch(`${API_BASE_URL}/api/v1/health`);
 
@@ -57,7 +65,13 @@ export async function getMlModels(): Promise<ModelMetadata[]> {
 export async function inferImage(
   modelId: string,
   file: File,
-): Promise<{ model_id: string; predictions: Prediction[] }> {
+): Promise<{
+  model_id: string;
+  predictions: Prediction[];
+  model_load_time_ms: number | null;
+  inference_time_ms: number;
+  model_was_loaded: boolean;
+}> {
   const formData = new FormData();
   formData.append("file", file);
 
@@ -73,7 +87,36 @@ export async function inferImage(
   return response.json() as Promise<{
     model_id: string;
     predictions: Prediction[];
+    model_load_time_ms: number | null;
+    inference_time_ms: number;
+    model_was_loaded: boolean;
   }>;
+}
+
+export async function releaseImageModel(modelId: string, source: "cv" | "ml" = "cv"): Promise<{ model_id: string; unloaded: boolean }> {
+  const baseUrl = source === "ml" ? ML_API_BASE_URL : API_BASE_URL;
+  const response = await fetch(`${baseUrl}/api/v1/models/${modelId}/runtime`, { method: "DELETE" });
+
+  if (!response.ok) {
+    throw new Error(`Model release failed: ${response.status}`);
+  }
+
+  return response.json() as Promise<{ model_id: string; unloaded: boolean }>;
+}
+
+export async function getLoadedModels(): Promise<LoadedModel[]> {
+  const [cvResponse, mlResponse] = await Promise.allSettled([
+    fetch(`${API_BASE_URL}/api/v1/models/runtime`),
+    fetch(`${ML_API_BASE_URL}/api/v1/models/runtime`),
+  ]);
+  const loaded: LoadedModel[] = [];
+  if (cvResponse.status === "fulfilled" && cvResponse.value.ok) {
+    loaded.push(...(await cvResponse.value.json() as LoadedModel[]).map((model) => ({ ...model, source: "cv" as const })));
+  }
+  if (mlResponse.status === "fulfilled" && mlResponse.value.ok) {
+    loaded.push(...(await mlResponse.value.json() as LoadedModel[]).map((model) => ({ ...model, source: "ml" as const })));
+  }
+  return loaded;
 }
 
 export async function inferTabular(

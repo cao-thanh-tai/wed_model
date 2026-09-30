@@ -87,10 +87,26 @@ CV models:
 Invoke-RestMethod http://127.0.0.1:8001/api/v1/models
 ```
 
+Loaded CV models:
+
+```powershell
+Invoke-RestMethod http://127.0.0.1:8001/api/v1/models/runtime
+```
+
 ML health:
 
 ```powershell
 Invoke-RestMethod http://127.0.0.1:8002/api/v1/health
 ```
+
+Loaded ML models:
+
+```powershell
+Invoke-RestMethod http://127.0.0.1:8002/api/v1/models/runtime
+```
+
+The frontend runtime menu in the topbar lists loaded models from both
+backends. Use its `Release` action to remove a model from memory without
+deleting its checkpoint or weights.
 
 Stop a running server with `Ctrl+C` in its terminal.

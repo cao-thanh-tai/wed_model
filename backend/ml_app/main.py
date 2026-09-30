@@ -8,14 +8,14 @@ if str(project_root) not in sys.path:
 from fastapi import FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 
-from ml_app.model_registry import get_model, get_model_metadata
+from ml_app.model_registry import get_model, get_model_metadata, list_loaded_models, unload_model
 from ml_app.schemas import ModelMetadata, PredictionRequest, PredictionResponse
 
 app = FastAPI(title="AI Hub ML API", version="0.1.0")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
-    allow_methods=["GET", "POST"],
+    allow_methods=["GET", "POST", "DELETE"],
     allow_headers=["*"],
 )
 
@@ -28,6 +28,18 @@ def health_check() -> dict[str, str]:
 @app.get("/api/v1/models", response_model=list[ModelMetadata])
 def list_models() -> list[dict[str, object]]:
     return get_model_metadata()
+
+
+@app.get("/api/v1/models/runtime")
+def loaded_models() -> list[dict[str, object]]:
+    return list_loaded_models()
+
+
+@app.delete("/api/v1/models/{model_id}/runtime")
+def release_model(model_id: str) -> dict[str, object]:
+    if model_id not in {model["id"] for model in get_model_metadata()}:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Model not found")
+    return {"model_id": model_id, "unloaded": unload_model(model_id)}
 
 
 @app.post("/api/v1/inference/{model_id}", response_model=PredictionResponse)

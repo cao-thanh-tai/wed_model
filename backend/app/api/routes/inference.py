@@ -16,10 +16,19 @@ async def run_inference(model_id: str, file: UploadFile = File(...)) -> Inferenc
         raise HTTPException(status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, detail="Only image files are supported")
 
     try:
-        predictions = inference_service.predict_image(model_id, await file.read())
+        predictions, model_load_time_ms, inference_time_ms, model_was_loaded = inference_service.predict_image(
+            model_id,
+            await file.read(),
+        )
     except Exception as error:
         if isinstance(error, (OSError, ValueError)):
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid image file") from error
         raise
 
-    return InferenceResponse(model_id=model_id, predictions=predictions)
+    return InferenceResponse(
+        model_id=model_id,
+        predictions=predictions,
+        model_load_time_ms=model_load_time_ms,
+        inference_time_ms=round(inference_time_ms, 2),
+        model_was_loaded=model_was_loaded,
+    )

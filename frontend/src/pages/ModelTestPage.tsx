@@ -28,6 +28,11 @@ function ModelTestPage({ apiState, models }: ModelTestPageProps) {
         <h2 id="tester-title">Test {model.name}</h2>
         <p className="intro-copy">Upload an image and inspect what the model finds.</p>
       </div>
+      <div className="tester-context" aria-label="Model input and output">
+        <span><b>Input</b>{model.input_type}</span>
+        <span><b>Output</b>{model.output_type}</span>
+        <span><b>Backend</b>{model.source === "ml" ? "ML / 8002" : "CV / 8001"}</span>
+      </div>
       <article className="model-workspace tester-page-card" aria-label="Model test area">
         {model.input_type === "tabular" ? (
           <TabularTester modelId={model.id} modelName={model.name} />

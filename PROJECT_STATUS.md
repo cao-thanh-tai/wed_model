@@ -19,6 +19,9 @@ The model is a Pascal VOC multi-label ViT classifier with 20 labels. It uses
 the weights in `models/pascal_voc_multilabel_vit/weights/voc-multilabel-vit/` and has been tested
 through the inference API.
 
+The frontend has per-model cover assets under `frontend/public/models/`, with
+the shared asset map in `frontend/src/services/modelAssets.ts`.
+
 The CV backend also serves the CUB-200-2011 ResNet50 classifier. Its runtime
 adapter is in `models/cub_200_2011/inference.py`, and its 200 class names are
 loaded from `models/cub_200_2011/classes.txt`. The local checkpoint is about
@@ -47,10 +50,14 @@ GET  /api/v1/health
 GET  /api/v1/models
 POST /api/v1/inference/pascal-voc-multilabel-vit
 POST /api/v1/inference/cub-200-2011
+GET  /api/v1/models/runtime
+DELETE /api/v1/models/{model_id}/runtime
 ```
 
 The inference endpoint accepts an image as multipart form field `file` and
-returns labels with confidence scores.
+returns labels with confidence scores and model-load/inference timings. Runtime
+endpoints list loaded models and release a selected model from memory. The ML
+backend exposes the same runtime endpoints for Titanic models on port `8002`.
 
 ## How To Run
 
@@ -94,14 +101,19 @@ Frontend URL: `http://localhost:5173`
 - ML health, model listing, and Titanic inference return HTTP 200 in Conda `ml`.
 - Frontend production build passes with `npm run build`.
 - Frontend image tester supports drag-and-drop, image validation, and explicit inference loading/error states.
+- Frontend image tester shows model-load and inference timings, supports copy/JSON export, and releases models manually.
 - Frontend model navigation uses client-side routing without full page reloads.
+- Topbar runtime manager lists loaded CV/ML models and releases them on demand.
+- Workspace cards and model detail pages use per-model cover images.
+- Breadcrumb navigation provides clickable route history under `Model lab`.
 - ML API returns both `titanic-xgboost` and `titanic-random-forest`.
 - Titanic form inference works from the ML API and frontend.
 
 ## Current Next Step
 
 Continue frontend polish and task-aware UX. The frontend currently reads CV
-models from port `8001` and ML models from port `8002`.
+models from port `8001` and ML models from port `8002`. Runtime model state is
+polled from both backends and can be released from the topbar.
 
 Next useful tasks:
 

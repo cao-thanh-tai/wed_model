@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { ApiState, ModelMetadata } from "../services/api";
+import { getModelCoverImage } from "../services/modelAssets";
 
 type WorkspacePageProps = {
   apiState: ApiState;
@@ -34,16 +35,24 @@ function WorkspacePage({ apiState, models }: WorkspacePageProps) {
         <div className="empty-state">No models are available right now.</div>
       )}
 
-      <div className="catalogue-grid" aria-label="Available models">
+      {apiState === "checking" ? (
+        <div className="catalogue-grid catalogue-grid-loading" aria-label="Loading models">
+          {[0, 1, 2].map((item) => <div className="model-card-skeleton" key={item}><div /><div /><div /></div>)}
+        </div>
+      ) : <div className="catalogue-grid" aria-label="Available models">
         {models.map((model, index) => (
+          (() => {
+            const coverImage = getModelCoverImage(model.id);
+            return (
           <Link
             className="model-card"
             key={model.id}
             to={`/models/${model.id}`}
           >
-            <div className={`model-card-visual model-card-visual-${index % 3}`}>
+            <div className={`model-card-visual model-card-visual-${index % 3} model-card-visual-${model.source ?? "cv"}`}>
               <span>{String(index + 1).padStart(2, "0")}</span>
-              <div className="visual-frame" />
+              {coverImage ? <img className="model-card-image" src={coverImage} alt="" /> : <div className="visual-specimen" aria-hidden="true"><i /><i /><i /></div>}
+              <strong>{model.input_type === "image" ? "VISION" : "TABULAR"}</strong>
             </div>
             <div className="model-card-body">
               <div className="model-card-meta">
@@ -55,6 +64,8 @@ function WorkspacePage({ apiState, models }: WorkspacePageProps) {
               <span className="open-model">View model details <span aria-hidden="true">-&gt;</span></span>
             </div>
           </Link>
+            );
+          })()
         ))}
 
         {plannedModels.map((model) => (
@@ -72,7 +83,7 @@ function WorkspacePage({ apiState, models }: WorkspacePageProps) {
             </div>
           </article>
         ))}
-      </div>
+      </div>}
     </section>
   );
 }
