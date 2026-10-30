@@ -1,12 +1,21 @@
+from collections.abc import Callable
+from typing import Any
+
 from app.schemas.model import ModelMetadata
+from models.fruit_classification.inference import FruitClassificationInference
+
+
+ModelFactory = Callable[[], Any]
 
 
 class ModelRegistry:
     def __init__(self) -> None:
         self._models: dict[str, ModelMetadata] = {}
+        self._factories: dict[str, ModelFactory] = {}
 
-    def register(self, metadata: ModelMetadata) -> None:
+    def register(self, metadata: ModelMetadata, factory: ModelFactory) -> None:
         self._models[metadata.id] = metadata
+        self._factories[metadata.id] = factory
 
     def list_metadata(self) -> list[ModelMetadata]:
         return list(self._models.values())
@@ -14,31 +23,22 @@ class ModelRegistry:
     def has_model(self, model_id: str) -> bool:
         return model_id in self._models
 
+    def create_predictor(self, model_id: str) -> Any:
+        try:
+            return self._factories[model_id]()
+        except KeyError as error:
+            raise KeyError(model_id) from error
+
 
 model_registry = ModelRegistry()
 model_registry.register(
     ModelMetadata(
-        id="pascal-voc-multilabel-vit",
-        name="Pascal VOC Multi-label ViT",
-        description="Vision Transformer for multi-label Pascal VOC image classification.",
+        id="fruit-classification",
+        name="Fruit Classification",
+        description="ResNet18 image classifier for ten fruit categories.",
         category="Computer Vision",
         input_type="image",
-        output_type="multi-label classification",
-        metrics={
-            "f1_macro": 0.7924,
-            "f1_micro": 0.8426,
-            "precision": 0.9131,
-            "recall": 0.7143,
-        },
-    )
-)
-model_registry.register(
-    ModelMetadata(
-        id="cub-200-2011",
-        name="CUB-200-2011 Bird Classification",
-        description="ResNet50 classifier trained to recognize 200 bird species from the CUB-200-2011 dataset.",
-        category="Computer Vision",
-        input_type="image",
-        output_type="top-k classification",
-    )
+        output_type="single-label classification",
+    ),
+    FruitClassificationInference,
 )

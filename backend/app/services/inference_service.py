@@ -16,16 +16,9 @@ class InferenceService:
     def _get_predictor(self, model_id: str) -> tuple[Any, float | None, bool]:
         if model_id not in self._predictors:
             load_started = perf_counter()
-            if model_id == "pascal-voc-multilabel-vit":
-                from models.pascal_voc_multilabel_vit.inference import PascalVocInference
+            from app.services.model_registry import model_registry
 
-                predictor = PascalVocInference()
-            elif model_id == "cub-200-2011":
-                from models.cub_200_2011.inference import Cub200Inference
-
-                predictor = Cub200Inference()
-            else:
-                raise KeyError(model_id)
+            predictor = model_registry.create_predictor(model_id)
             self._predictors[model_id] = predictor
             load_time_ms = (perf_counter() - load_started) * 1000
             self._loaded_at[model_id] = datetime.now(timezone.utc).isoformat()
@@ -49,15 +42,11 @@ class InferenceService:
         self._loaded_at.pop(model_id, None)
         self._load_times_ms.pop(model_id, None)
 
-        model = getattr(predictor, "model", None)
-        if model is not None:
-            try:
-                model.to("cpu")
-            except (AttributeError, RuntimeError):
-                pass
+        session = getattr(predictor, "session", None)
+        if session is not None:
+            del session
         del predictor
         gc.collect()
-        self._clear_cuda_cache()
         return True
 
     def list_loaded_models(self) -> list[dict[str, Any]]:
@@ -66,20 +55,9 @@ class InferenceService:
                 "model_id": model_id,
                 "loaded_at": self._loaded_at[model_id],
                 "load_time_ms": round(self._load_times_ms[model_id], 2),
-                "device": str(getattr(predictor, "device", "unknown")),
+                "device": str(getattr(predictor, "device", "CPU")),
             }
             for model_id, predictor in self._predictors.items()
         ]
-
-    @staticmethod
-    def _clear_cuda_cache() -> None:
-        try:
-            import torch
-
-            if torch.cuda.is_available():
-                torch.cuda.empty_cache()
-        except ImportError:
-            pass
-
 
 inference_service = InferenceService()
