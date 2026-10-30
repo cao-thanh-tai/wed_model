@@ -7,9 +7,10 @@ type TopbarProps = {
   loadedModels: LoadedModel[];
   onReleaseModel: (modelId: string, source: "onnx") => Promise<void>;
   models: ModelMetadata[];
+  isVisible: boolean;
 };
 
-function Topbar({ apiState, loadedModels, onReleaseModel, models }: TopbarProps) {
+function Topbar({ apiState, loadedModels, onReleaseModel, models, isVisible }: TopbarProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [releasingModelId, setReleasingModelId] = useState<string | null>(null);
   const location = useLocation();
@@ -35,7 +36,7 @@ function Topbar({ apiState, loadedModels, onReleaseModel, models }: TopbarProps)
   }
 
   return (
-    <header className="topbar">
+    <header className={`topbar ${isVisible ? "is-visible" : "is-hidden"}`}>
       <div>
         <p className="eyebrow">AI / ML workspace</p>
         <h1>Model lab</h1>

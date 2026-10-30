@@ -13,6 +13,7 @@ function App() {
   const [apiState, setApiState] = useState<ApiState>("checking");
   const [models, setModels] = useState<ModelMetadata[]>([]);
   const [loadedModels, setLoadedModels] = useState<LoadedModel[]>([]);
+  const [modelSearch, setModelSearch] = useState("");
 
   useEffect(() => {
     Promise.allSettled([getHealth(), getModels()])
@@ -49,9 +50,9 @@ function App() {
   }
 
   return (
-    <AppShell apiState={apiState} loadedModels={loadedModels} onReleaseModel={releaseLoadedModel} models={models}>
+    <AppShell apiState={apiState} loadedModels={loadedModels} onReleaseModel={releaseLoadedModel} models={models} modelSearch={modelSearch} onModelSearchChange={setModelSearch}>
       <Routes>
-        <Route path="/" element={<WorkspacePage apiState={apiState} models={models} />} />
+        <Route path="/" element={<WorkspacePage apiState={apiState} models={models} search={modelSearch} />} />
         <Route path="/models/:modelId" element={<ModelPage apiState={apiState} models={models} />} />
         <Route path="/models/:modelId/test" element={<ModelTestPage apiState={apiState} models={models} />} />
         <Route path="/runs" element={<RunsPage />} />

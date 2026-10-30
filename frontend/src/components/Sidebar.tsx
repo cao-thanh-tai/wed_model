@@ -1,5 +1,6 @@
 import { NavLink } from "react-router-dom";
 import { NavigationItem } from "../types/navigation";
+import { ModelMetadata } from "../services/api";
 
 const navigationItems: NavigationItem[] = [
   { label: "Workspace", path: "/", status: "active" },
@@ -7,9 +8,16 @@ const navigationItems: NavigationItem[] = [
   { label: "Runs", path: "/runs", status: "active" },
 ];
 
-function Sidebar() {
+type SidebarProps = {
+  isVisible: boolean;
+  models: ModelMetadata[];
+  search: string;
+  onSearchChange: (value: string) => void;
+};
+
+function Sidebar({ isVisible, models, search, onSearchChange }: SidebarProps) {
   return (
-    <aside className="sidebar">
+    <header className={`top-nav ${isVisible ? "is-visible" : "is-hidden"}`}>
       <NavLink className="brand-lockup" to="/" aria-label="Go to AI Hub home">
         <span className="brand-mark">A</span>
         <span>AI Hub</span>
@@ -33,11 +41,32 @@ function Sidebar() {
         ))}
       </nav>
 
-      <div className="sidebar-footer">
+      <div className="nav-model-tools">
+        <label className="model-search">
+          <span aria-hidden="true">⌕</span>
+          <input
+            type="search"
+            value={search}
+            onChange={(event) => onSearchChange(event.target.value)}
+            placeholder="Search models"
+            aria-label="Search models"
+          />
+          <kbd>/</kbd>
+        </label>
+        <div className="model-shortcuts" aria-label="Quick model filters">
+          {models.slice(0, 4).map((model) => (
+            <button type="button" key={model.id} onClick={() => onSearchChange(model.name)}>
+              {model.name}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="top-nav-footer">
         <span className="status-dot" />
         <span>Local workspace</span>
       </div>
-    </aside>
+    </header>
   );
 }
 
