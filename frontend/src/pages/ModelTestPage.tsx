@@ -1,6 +1,5 @@
 import { Link, useParams } from "react-router-dom";
 import ModelTester from "../components/ModelTester";
-import TabularTester from "../components/TabularTester";
 import { ApiState, ModelMetadata } from "../services/api";
 
 type ModelTestPageProps = {
@@ -31,14 +30,10 @@ function ModelTestPage({ apiState, models }: ModelTestPageProps) {
       <div className="tester-context" aria-label="Model input and output">
         <span><b>Input</b>{model.input_type}</span>
         <span><b>Output</b>{model.output_type}</span>
-        <span><b>Backend</b>{model.source === "ml" ? "ML / 8002" : "CV / 8001"}</span>
+        <span><b>Backend</b>ONNX Runtime / 8000</span>
       </div>
       <article className="model-workspace tester-page-card" aria-label="Model test area">
-        {model.input_type === "tabular" ? (
-          <TabularTester modelId={model.id} modelName={model.name} />
-        ) : (
-          <ModelTester modelId={model.id} modelName={model.name} />
-        )}
+        <ModelTester modelId={model.id} modelName={model.name} />
       </article>
     </section>
   );

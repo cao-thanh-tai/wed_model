@@ -1,5 +1,4 @@
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://127.0.0.1:8001";
-const ML_API_BASE_URL = import.meta.env.VITE_ML_API_BASE_URL ?? "http://127.0.0.1:8002";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://127.0.0.1:8000";
 
 export type ModelMetadata = {
   id: string;
@@ -9,7 +8,7 @@ export type ModelMetadata = {
   input_type: string;
   output_type: string;
   metrics: Record<string, number>;
-  source?: "cv" | "ml";
+  source?: "onnx";
 };
 
 export type Prediction = {
@@ -29,7 +28,7 @@ export type LoadedModel = {
   loaded_at: string;
   load_time_ms: number;
   device: string;
-  source: "cv" | "ml";
+  source: "onnx";
 };
 
 export async function getHealth(): Promise<{ status: string }> {
@@ -47,16 +46,6 @@ export async function getModels(): Promise<ModelMetadata[]> {
 
   if (!response.ok) {
     throw new Error(`Model request failed: ${response.status}`);
-  }
-
-  return response.json() as Promise<ModelMetadata[]>;
-}
-
-export async function getMlModels(): Promise<ModelMetadata[]> {
-  const response = await fetch(`${ML_API_BASE_URL}/api/v1/models`);
-
-  if (!response.ok) {
-    throw new Error(`ML model request failed: ${response.status}`);
   }
 
   return response.json() as Promise<ModelMetadata[]>;
@@ -93,9 +82,8 @@ export async function inferImage(
   }>;
 }
 
-export async function releaseImageModel(modelId: string, source: "cv" | "ml" = "cv"): Promise<{ model_id: string; unloaded: boolean }> {
-  const baseUrl = source === "ml" ? ML_API_BASE_URL : API_BASE_URL;
-  const response = await fetch(`${baseUrl}/api/v1/models/${modelId}/runtime`, { method: "DELETE" });
+export async function releaseImageModel(modelId: string): Promise<{ model_id: string; unloaded: boolean }> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/models/${modelId}/runtime`, { method: "DELETE" });
 
   if (!response.ok) {
     throw new Error(`Model release failed: ${response.status}`);
@@ -105,33 +93,10 @@ export async function releaseImageModel(modelId: string, source: "cv" | "ml" = "
 }
 
 export async function getLoadedModels(): Promise<LoadedModel[]> {
-  const [cvResponse, mlResponse] = await Promise.allSettled([
-    fetch(`${API_BASE_URL}/api/v1/models/runtime`),
-    fetch(`${ML_API_BASE_URL}/api/v1/models/runtime`),
-  ]);
+  const response = await fetch(`${API_BASE_URL}/api/v1/models/runtime`);
   const loaded: LoadedModel[] = [];
-  if (cvResponse.status === "fulfilled" && cvResponse.value.ok) {
-    loaded.push(...(await cvResponse.value.json() as LoadedModel[]).map((model) => ({ ...model, source: "cv" as const })));
-  }
-  if (mlResponse.status === "fulfilled" && mlResponse.value.ok) {
-    loaded.push(...(await mlResponse.value.json() as LoadedModel[]).map((model) => ({ ...model, source: "ml" as const })));
+  if (response.ok) {
+    loaded.push(...(await response.json() as LoadedModel[]).map((model) => ({ ...model, source: "onnx" as const })));
   }
   return loaded;
-}
-
-export async function inferTabular(
-  modelId: string,
-  features: Record<string, number | string>,
-): Promise<{ model_id: string; result: TabularPrediction }> {
-  const response = await fetch(`${ML_API_BASE_URL}/api/v1/inference/${modelId}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ features }),
-  });
-
-  if (!response.ok) {
-    throw new Error(`ML inference request failed: ${response.status}`);
-  }
-
-  return response.json() as Promise<{ model_id: string; result: TabularPrediction }>;
 }

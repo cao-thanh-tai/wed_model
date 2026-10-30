@@ -7,7 +7,7 @@ type AppShellProps = {
   children: ReactNode;
   apiState: ApiState;
   loadedModels: LoadedModel[];
-  onReleaseModel: (modelId: string, source: "cv" | "ml") => Promise<void>;
+  onReleaseModel: (modelId: string, source: "onnx") => Promise<void>;
   models: ModelMetadata[];
 };
 

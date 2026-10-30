@@ -49,7 +49,7 @@ function WorkspacePage({ apiState, models }: WorkspacePageProps) {
             key={model.id}
             to={`/models/${model.id}`}
           >
-            <div className={`model-card-visual model-card-visual-${index % 3} model-card-visual-${model.source ?? "cv"}`}>
+            <div className={`model-card-visual model-card-visual-${index % 3} model-card-visual-${model.source ?? "onnx"}`}>
               <span>{String(index + 1).padStart(2, "0")}</span>
               {coverImage ? <img className="model-card-image" src={coverImage} alt="" /> : <div className="visual-specimen" aria-hidden="true"><i /><i /><i /></div>}
               <strong>{model.input_type === "image" ? "VISION" : "TABULAR"}</strong>

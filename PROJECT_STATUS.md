@@ -5,80 +5,44 @@ Read this file together with `ARCHITECTURE.md` and
 
 ## Current State
 
-The CV and ML end-to-end flows are working:
-
-```text
-Frontend -> FastAPI CV backend -> model registry -> Pascal VOC ViT -> predictions
-```
-
-```text
-Frontend -> FastAPI ML backend -> ML model registry -> Titanic model -> prediction
-```
-
-The model is a Pascal VOC multi-label ViT classifier with 20 labels. It uses
-the weights in `models/pascal_voc_multilabel_vit/weights/voc-multilabel-vit/` and has been tested
-through the inference API.
+The project has been reset to one FastAPI backend using ONNX Runtime. The
+previous CV/ML runtime implementations are no longer active. Fruit
+Classification is the first registered ONNX model and is available through the
+unified image inference endpoint.
 
 The frontend has per-model cover assets under `frontend/public/models/`, with
-the shared asset map in `frontend/src/services/modelAssets.ts`.
-
-The CV backend also serves the CUB-200-2011 ResNet50 classifier. Its runtime
-adapter is in `models/cub_200_2011/inference.py`, and its 200 class names are
-loaded from `models/cub_200_2011/classes.txt`. The local checkpoint is about
-192 MB and is intentionally excluded from normal Git commits.
+the shared asset map in `frontend/src/services/modelAssets.ts`. These assets
+and the generic frontend screens are retained while the backend is rebuilt.
 
 ## Runtime Layout
 
-- `frontend/`: React + TypeScript + Vite. Default API URL is port `8001`.
-- `backend/`: FastAPI routes, schemas, registry, and inference orchestration.
-- `backend/ml_app/`: separate ML FastAPI backend for the `ml` environment.
-- `models/pascal_voc_multilabel_vit/`: model runtime code and weights.
-- `models/cub_200_2011/`: CUB-200-2011 runtime adapter, class names, and local checkpoint.
-- `models/titanic_xgboost/`: Titanic XGBoost and Random Forest runtime code and weights.
-- `backend/requirements.txt`: shared backend dependencies.
-- `backend/ml_app/requirements.txt`: ML backend dependencies.
-- `models/pascal_voc_multilabel_vit/requirements.txt`: CV model dependencies.
-- Conda environment `cv`: current environment for the CV backend and model.
-- Conda environment `ml`: reserved for the separate traditional ML backend and models.
-- Conda environment `nlp`: reserved for the future separate NLP backend and models.
-- Conda environment `web`: obsolete and not part of the current flow.
+- `frontend/`: React + TypeScript + Vite, retained as the UI foundation.
+- `backend/`: the single FastAPI application and ONNX Runtime service.
+- `models/fruit_classification/`: Fruit ONNX file, metadata, and adapter.
+- `models/`: ONNX files, metadata, and small model adapters added incrementally.
+- Conda environment `web`: backend dependencies plus `onnxruntime`.
+- The old `backend/ml_app/` and model-specific Python runtimes are migration
+  leftovers to be removed or replaced during backend restructuring.
 
-## Implemented API
+## Target API
 
 ```text
 GET  /api/v1/health
 GET  /api/v1/models
-POST /api/v1/inference/pascal-voc-multilabel-vit
-POST /api/v1/inference/cub-200-2011
+POST /api/v1/inference/{model_id}
 GET  /api/v1/models/runtime
 DELETE /api/v1/models/{model_id}/runtime
 ```
 
-The inference endpoint accepts an image as multipart form field `file` and
-returns labels with confidence scores and model-load/inference timings. Runtime
-endpoints list loaded models and release a selected model from memory. The ML
-backend exposes the same runtime endpoints for Titanic models on port `8002`.
+The endpoint contract preserves generic metadata, structured errors,
+model-load timing, and inference timing without exposing model-specific
+implementation details.
 
 ## How To Run
 
-Backend terminal:
-
-```powershell
-conda activate cv
-cd D:\vscode\wed\backend
-pip install -r requirements.txt
-pip install -r ..\models\pascal_voc_multilabel_vit\requirements.txt
-uvicorn app.main:app --reload --port 8001
-```
-
-ML backend terminal:
-
-```powershell
-conda activate ml
-cd D:\vscode\wed\backend
-pip install -r ml_app\requirements.txt
-uvicorn ml_app.main:app --reload --port 8002
-```
+Use the single-backend instructions in `RUN_LOCAL.md` with the Conda `web`
+environment and port `8000`. The frontend continues to run with Node.js/npm on
+port `5173`.
 
 Frontend terminal:
 
@@ -92,43 +56,36 @@ Frontend URL: `http://localhost:5173`
 
 ## Verified Checks
 
-- CV environment loads the model weights.
-- `/api/v1/health` returns HTTP 200.
-- `/api/v1/models` returns `pascal-voc-multilabel-vit` metadata.
-- Multipart image inference returns HTTP 200 and predictions.
-- CUB-200-2011 checkpoint loads in the `cv` environment and returns top-5 species predictions.
-- CUB class names are mapped from `classes.txt` instead of generic class IDs.
-- ML health, model listing, and Titanic inference return HTTP 200 in Conda `ml`.
+- The existing frontend production build passes and remains the foundation for
+  the migration.
+- The previous CV/ML flows were verified before this reset, but those checks
+  are historical and do not certify the future ONNX backend.
+- Backend restructuring and ONNX Runtime installation are complete for the
+  first model.
+- Fruit Classification ONNX graph and API inference have been validated.
 - Frontend production build passes with `npm run build`.
 - Frontend image tester supports drag-and-drop, image validation, and explicit inference loading/error states.
 - Frontend image tester shows model-load and inference timings, supports copy/JSON export, and releases models manually.
 - Frontend model navigation uses client-side routing without full page reloads.
-- Topbar runtime manager lists loaded CV/ML models and releases them on demand.
+- Topbar runtime manager lists loaded ONNX models and releases them on demand.
 - Workspace cards and model detail pages use per-model cover images.
 - Breadcrumb navigation provides clickable route history under `Model lab`.
 - ML API returns both `titanic-xgboost` and `titanic-random-forest`.
-- Titanic form inference works from the ML API and frontend.
+- Titanic form inference worked from the previous ML API and is not currently
+  part of the target backend.
 
 ## Current Next Step
 
-Continue frontend polish and task-aware UX. The frontend currently reads CV
-models from port `8001` and ML models from port `8002`. Runtime model state is
-polled from both backends and can be released from the topbar.
-
-Next useful tasks:
-
-1. Verify the frontend manually with both CV and ML backends running.
-2. Add more complete model detail content and metric labels.
-3. Improve run history persistence when a database becomes necessary.
-4. Add the NLP task later using Conda `nlp` and port `8003`.
+1. Add additional ONNX models one at a time using the same package structure.
+2. Improve model-specific metadata and frontend assets when required.
+3. Add persistent run history only when a database becomes necessary.
 
 ## Architecture Boundary
 
-The project still follows the original separation of responsibilities. The
-only deliberate V1 exception is task-specific runtime isolation: CV, ML, and
-NLP each have their own Conda environment and backend process. This is one
-backend per task, not one backend service per individual model. Compatible
-models within one task still share that task's registry and API.
+The target architecture uses one backend, the Conda `web` environment, and one
+ONNX Runtime execution layer. Frontend, backend, and model responsibilities
+remain separate. New models must provide the documented web package before
+being registered.
 
 Do not add databases, queues, microservices, authentication, or deployment
 infrastructure unless a new requirement justifies them.

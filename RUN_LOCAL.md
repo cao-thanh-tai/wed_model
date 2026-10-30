@@ -1,6 +1,11 @@
 # Run AI Hub Locally
 
-Open three PowerShell terminals from the repository root:
+The local setup uses one FastAPI backend using ONNX Runtime. The existing
+model-specific Conda environments and model services are no longer part of the
+workflow.
+
+The backend and frontend are separate processes. They can run in two terminals,
+or the backend can be started in a second PowerShell window from the first.
 
 ```powershell
 cd D:\vscode\wed
@@ -10,22 +15,13 @@ Install dependencies once before starting the services.
 
 ## One-time setup
 
-### CV environment
+Use the existing `web` Conda environment, then install the unified backend
+dependencies once:
 
 ```powershell
-conda activate cv
+conda activate web
 cd D:\vscode\wed\backend
 pip install -r requirements.txt
-pip install -r ..\models\pascal_voc_multilabel_vit\requirements.txt
-pip install -r ..\models\cub_200_2011\requirements.txt
-```
-
-### ML environment
-
-```powershell
-conda activate ml
-cd D:\vscode\wed\backend
-pip install -r ml_app\requirements.txt
 ```
 
 ### Frontend
@@ -35,36 +31,19 @@ cd D:\vscode\wed\frontend
 npm install
 ```
 
-## Terminal 1 - CV backend
+## Backend
 
 ```powershell
-conda activate cv
 cd D:\vscode\wed\backend
-uvicorn app.main:app --reload --port 8001
+conda activate web
+uvicorn app.main:app --reload --port 8000
 ```
 
-CV API: http://127.0.0.1:8001
+API: http://127.0.0.1:8000
 
-API docs: http://127.0.0.1:8001/docs
+API docs: http://127.0.0.1:8000/docs
 
-Models currently served here:
-
-- Pascal VOC Multi-label ViT
-- CUB-200-2011 Bird Classification
-
-## Terminal 2 - ML backend
-
-```powershell
-conda activate ml
-cd D:\vscode\wed\backend
-uvicorn ml_app.main:app --reload --port 8002
-```
-
-ML API: http://127.0.0.1:8002
-
-API docs: http://127.0.0.1:8002/docs
-
-## Terminal 3 - Frontend
+## Frontend
 
 ```powershell
 cd D:\vscode\wed\frontend
@@ -75,38 +54,29 @@ Frontend: http://localhost:5173
 
 ## Quick checks
 
-CV health:
+Backend health:
 
 ```powershell
-Invoke-RestMethod http://127.0.0.1:8001/api/v1/health
+Invoke-RestMethod http://127.0.0.1:8000/api/v1/health
 ```
 
-CV models:
+Registered models:
 
 ```powershell
-Invoke-RestMethod http://127.0.0.1:8001/api/v1/models
+Invoke-RestMethod http://127.0.0.1:8000/api/v1/models
 ```
 
-Loaded CV models:
+Loaded runtime models:
 
 ```powershell
-Invoke-RestMethod http://127.0.0.1:8001/api/v1/models/runtime
+Invoke-RestMethod http://127.0.0.1:8000/api/v1/models/runtime
 ```
 
-ML health:
+The frontend should use the unified backend URL. Runtime release behavior can
+be retained, but it must operate on ONNX Runtime sessions in the single
+backend.
 
-```powershell
-Invoke-RestMethod http://127.0.0.1:8002/api/v1/health
-```
-
-Loaded ML models:
-
-```powershell
-Invoke-RestMethod http://127.0.0.1:8002/api/v1/models/runtime
-```
-
-The frontend runtime menu in the topbar lists loaded models from both
-backends. Use its `Release` action to remove a model from memory without
-deleting its checkpoint or weights.
+The backend runs `onnxruntime` in Python. Do not install `onnxruntime-web`;
+the browser uploads images to the backend instead of executing the model.
 
 Stop a running server with `Ctrl+C` in its terminal.

@@ -48,14 +48,15 @@ The project should remain simple and modular. Do NOT introduce microservices, Ku
                  ┌──────────────────┐
                  │     BACKEND      │
                  │     FastAPI      │
-                 │      Python      │
+                 │ Python + ONNX   │
+                 │     Runtime     │
                  └────────┬─────────┘
                           │
               ┌───────────┴───────────┐
               ▼                       ▼
        ┌──────────────┐        ┌──────────────┐
        │    MODELS    │        │   DATABASE   │
-       │ PyTorch / ML │        │   Future     │
+       │  ONNX files  │        │   Future     │
        └──────────────┘        └──────────────┘
 ```
 
@@ -433,40 +434,19 @@ Example:
 
 ```text
 models/
-└── edge_detection/
-    ├── model.py
-    ├── inference.py
+└── <model-id>/
+    ├── model.onnx
+    ├── metadata.json
     ├── preprocessing.py
-    ├── postprocessing.py
-    ├── config.py
-    └── weights/
-        └── best_model.pth
+    └── postprocessing.py
 ```
 
 Responsibilities:
 
-### model.py
+### model.onnx
 
-Defines the model architecture.
-
-Example:
-
-```python
-class EdgeDetectionCNN(nn.Module):
-    ...
-```
-
-### inference.py
-
-Defines how the trained model is loaded and used for prediction.
-
-Example:
-
-```python
-model = EdgeDetectionCNN()
-model.load_state_dict(...)
-model.eval()
-```
+Contains the exported model graph loaded by ONNX Runtime. The running backend
+does not need the original framework-specific model implementation.
 
 ### preprocessing.py
 
@@ -493,9 +473,9 @@ tensor → class label
 tensor → JSON
 ```
 
-### config.py
+### metadata.json
 
-Contains model-specific configuration.
+Contains model identity, input/output requirements, labels, and model version.
 
 Examples:
 
@@ -506,9 +486,10 @@ normalization parameters
 model version
 ```
 
-### weights/
+### preprocessing.py and postprocessing.py
 
-Contains trained model weights.
+Convert API input to the ONNX tensor contract and convert runtime output to the
+stable API response.
 
 Do not put training datasets inside the deployed model directory.
 
@@ -795,31 +776,22 @@ Initially use mock model metadata if necessary.
 
 ---
 
-## Phase 3 — First Real Model
+## Phase 3 — ONNX Runtime Foundation
 
-Start with one real model.
-
-Recommended example:
-
-```text
-edge_detection
-```
-
-Implement:
-
-```text
-model.py
-inference.py
-preprocessing.py
-postprocessing.py
-weights/
-```
-
-Then connect it to FastAPI.
+Implement one Python environment, the ONNX Runtime session adapter, the model
+registry, and a generic input/output contract. Do not add model-specific
+runtime code until an ONNX file and its contract are available.
 
 ---
 
-## Phase 4 — Frontend
+## Phase 4 — First ONNX Model
+
+Add one supplied ONNX model, its metadata, preprocessing/postprocessing
+adapter, and registry entry. Then connect it to FastAPI.
+
+---
+
+## Phase 5 — Frontend
 
 Build:
 
@@ -834,7 +806,7 @@ Use mock data initially if backend is not ready.
 
 ---
 
-## Phase 5 — Integration
+## Phase 6 — Integration
 
 Connect:
 
@@ -843,31 +815,30 @@ Frontend
     ↓
 FastAPI
     ↓
-Edge Detection Model
+ONNX Runtime model
 ```
 
 Test the complete pipeline.
 
 ---
 
-## Phase 6 — Add More Models
+## Phase 7 — Add More Models
 
 Add models one at a time.
 
 For example:
 
 ```text
-edge_detection
-titanic
-churn
-music_genre
+model-a
+model-b
+future models
 ```
 
 Each model should follow the same interface.
 
 ---
 
-## Phase 7 — Polish
+## Phase 8 — Polish
 
 Only after the system works:
 
@@ -916,11 +887,11 @@ unless the project actually requires them.
 Start with:
 
 ```text
-React/Next.js
+React
 +
 FastAPI
 +
-PyTorch
+ONNX Runtime
 ```
 
 ---
@@ -956,14 +927,13 @@ Split services only when there is a real reason such as:
 * Large model size
 * Independent deployment requirements
 
-### Current V1 exception
+### ONNX migration direction
 
-The current CV model runs in the `cv` Conda environment and its FastAPI
-process uses port `8001`. Traditional ML models run in the separate `ml`
-environment and backend process on port `8002`. Future NLP models may use the
-`nlp` environment and port `8003`. This is one backend per task, not one API
-service per model: each task backend may host multiple compatible models. The
-frontend remains the only client-facing application.
+The previous task-specific CV/ML backends and Conda environments are not the
+target architecture. The backend will use the shared `web` Conda environment,
+one FastAPI process, and ONNX Runtime sessions for compatible exported models. Models will
+be added incrementally after their ONNX files and input/output contracts are
+available. The frontend remains the only client-facing application.
 
 ---
 
@@ -976,9 +946,9 @@ Prefer:
 ```text
 Backend
    ↓
-Model Interface
+ONNX Runtime adapter
    ↓
-Specific Model
+Specific ONNX model
 ```
 
 instead of:

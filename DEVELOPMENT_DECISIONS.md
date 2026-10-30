@@ -7,9 +7,10 @@ This document turns the high-level architecture into concrete V1 decisions.
 ### Python Environment
 
 - Python version: `3.11`
-- `cv` owns the CV backend and CV model dependencies
-- `ml` owns the traditional machine-learning backend and model dependencies
-- `nlp` will own the NLP backend and NLP model dependencies when added
+- Use the Conda `web` environment for the backend and ONNX Runtime.
+- ONNX Runtime is the model execution runtime for the next implementation phase.
+- Do not create separate `cv`, `ml`, or `nlp` Conda environments for model
+  execution.
 - The frontend uses Node.js/npm, not Conda
 
 ### Frontend
@@ -32,18 +33,20 @@ fast to start, and separate from the FastAPI backend.
 - Pydantic schemas
 - Uvicorn for local development
 - Pytest for tests
-- Shared backend dependencies live in `backend/requirements.txt`
-- Model-specific dependencies live beside the model, for example
-    `models/pascal_voc_multilabel_vit/requirements.txt`
+- Shared backend and ONNX Runtime dependencies live in
+  `backend/requirements.txt`.
+- Model-specific conversion tools may be kept separately, but the running
+  backend must depend on exported ONNX models rather than PyTorch,
+  Transformers, XGBoost, or scikit-learn runtimes.
 
 The backend owns validation, model selection, inference orchestration, and
 public API responses.
 
 ### Models
 
-- Python model modules under `models/`
-- A consistent inference interface for every registered model
-- Model-specific preprocessing and postprocessing stay with the model
+- Exported ONNX files and model metadata under `models/`
+- A consistent ONNX inference interface for every registered model
+- Model-specific preprocessing and postprocessing stay with the model adapter
 - Model weights never go into the frontend
 
 ## 2. How To Use Copilot And Agents
@@ -111,10 +114,10 @@ ai-hub/
 │   └── README.md
 └── models/
     ├── __init__.py
-    ├── base.py
-    ├── pascal_voc_multilabel_vit/
-    │   ├── requirements.txt
-    │   └── weights/
+    ├── <model-id>/
+    │   ├── model.onnx
+    │   ├── metadata.json
+    │   └── preprocessing/postprocessing code
     └── README.md
 ```
 
@@ -124,14 +127,15 @@ not provide value by themselves.
 
 ## 5. First Implementation Order
 
-1. Create the minimal backend and frontend projects.
-2. Add a model metadata contract and a registry.
-3. Implement `GET /api/v1/models`.
-4. Add one real or deliberately small working model.
-5. Implement `POST /api/v1/inference/{model_id}`.
-6. Build the generic model list, detail, and tester screens.
-7. Connect the frontend to the backend.
-8. Test the complete upload-to-result flow.
+1. Keep the existing frontend as the UI foundation.
+2. Simplify the backend to one FastAPI application and one Python environment.
+3. Define the ONNX model metadata and inference contract.
+4. Implement a registry and `GET /api/v1/models` without model-specific
+   route conditionals.
+5. Add ONNX Runtime inference for one model supplied later.
+6. Connect the existing generic frontend tester to the unified backend.
+7. Validate preprocessing, predictions, error handling, and response parity.
+8. Add the remaining models one at a time.
 
 ## 6. V1 Boundaries
 
@@ -145,7 +149,7 @@ through the model registry/interface. New models should be added by creating
 their model module and registering metadata, not by adding model-specific UI
 pages or large route conditionals.
 
-For local development, run one backend process per task environment. The CV
-backend uses port `8001`, the ML backend uses port `8002`, a future NLP backend
-can use port `8003`, and the frontend uses port `5173`. Multiple terminals are
-expected when multiple task backends are active.
+For local development, run one backend process on port `8000` and the
+frontend on port `5173`. Model files are added to the shared registry one at a
+time. The old task-specific backend code is migration history and should not
+be treated as the target architecture.
